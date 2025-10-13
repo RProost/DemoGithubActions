@@ -1,0 +1,88 @@
+name: CI (.NET)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build & Test (matrix)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dotnet: ['9.0.x'] # add '9.0.x' when available; you can also add OS: [ubuntu-latest, windows-latest]
+    env:
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+      DOTNET_NOLOGO: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ matrix.dotnet }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ matrix.dotnet }}
+          cache: true  # built-in NuGet cache
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build (treat warnings as errors)
+        run: dotnet build --configuration Release --no-restore /warnaserror
+
+      - name: Run analyzers (optional but good)
+        run: dotnet build --configuration Release --no-restore /p:TreatWarningsAsErrors=true
+
+      - name: Run tests with coverage
+        run: |
+          dotnet test --configuration Release --no-build \
+            --collect "XPlat Code Coverage" \
+            --logger "trx;LogFileName=test_results.trx"
+
+      - name: Convert coverage to Cobertura & HTML
+        run: |
+          dotnet tool install --global dotnet-reportgenerator-globaltool
+          reportgenerator \
+            -reports:"**/coverage.cobertura.xml" \
+            -targetdir:"coverage" \
+            -reporttypes:"HtmlInline;Cobertura"
+        env:
+          PATH: $HOME/.dotnet/tools:$PATH
+
+      - name: Upload coverage report (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.dotnet }}
+          path: coverage
+
+      - name: Test results (TRX) as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.dotnet }}
+          path: "**/*.trx"
+
+  formatting:
+    name: Enforce dotnet format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Check formatting
+        run: |
+          dotnet tool restore || true
+          dotnet tool update -g dotnet-format || true
+          dotnet format --verify-no-changes

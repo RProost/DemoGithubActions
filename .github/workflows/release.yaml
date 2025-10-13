@@ -1,0 +1,59 @@
+name: Release (.NET)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write  # needed to create GitHub Releases
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+      DOTNET_NOLOGO: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # nice to have for versioning tools
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+          cache: true
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test --configuration Release --no-build
+
+      - name: Publish self-contained (Linux x64)
+        run: |
+          dotnet publish ./YOUR_PROJECT.csproj \
+            -c Release \
+            -r linux-x64 \
+            --self-contained false \
+            -o out/linux-x64
+
+      - name: Archive binaries
+        run: |
+          cd out
+          zip -r app-linux-x64.zip linux-x64
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            out/app-linux-x64.zip
