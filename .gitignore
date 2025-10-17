@@ -1,0 +1,44 @@
+# ----- IDE / OS -----
+.vs/
+.vscode/
+*.code-workspace
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+.DS_Store
+Thumbs.db
+
+# ----- Build outputs -----
+bin/
+obj/
+out/
+TestResults/
+artifacts/
+*.nupkg
+*.snupkg
+*.cache
+
+# ----- Coverage & reports -----
+coverage/
+*.coverage
+*.coveragexml
+*.xcresult
+
+# ----- Logs & temp -----
+*.log
+*.tlog
+*.tmp
+
+# ----- Rider/JetBrains -----
+.idea/
+*.ipr
+*.iws
+*.iml
+
+# ----- Node (if present for tooling) -----
+node_modules/
+
+# ----- Keep NuGet lock files! -----
+# DO NOT ignore packages.lock.json; we commit those for reproducible restores.
