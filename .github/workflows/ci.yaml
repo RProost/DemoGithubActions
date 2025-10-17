@@ -46,7 +46,11 @@ jobs:
         with:
           dotnet-version: '9.0.x'
           cache: true  # requires packages.lock.json, which we'll add
-
+          cache-dependency-path: |
+            **/packages.lock.json
+            global.json
+            Directory.Build.props
+            
       - name: Restore (solution)
         run: dotnet restore DemoGithubActions.sln
 
