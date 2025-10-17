@@ -5,7 +5,7 @@ on:
     branches: [ main ]
     paths:
       - 'HelloWorld/**'
-      - 'tests/**'
+      - 'HelloWorld.Tests/**'     # include your test project path
       - '.github/workflows/**'
       - 'DemoGithubActions.sln'
       - 'Directory.Build.props'
@@ -16,7 +16,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'HelloWorld/**'
-      - 'tests/**'
+      - 'HelloWorld.Tests/**'     # include your test project path
       - '.github/workflows/**'
       - 'DemoGithubActions.sln'
       - 'Directory.Build.props'
@@ -45,12 +45,12 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
-          cache: true  # requires packages.lock.json, which we'll add
+          cache: true
           cache-dependency-path: |
             **/packages.lock.json
             global.json
             Directory.Build.props
-            
+
       - name: Restore (solution)
         run: dotnet restore DemoGithubActions.sln
 
@@ -63,15 +63,16 @@ jobs:
             --collect "XPlat Code Coverage" \
             --logger "trx;LogFileName=test_results.trx"
 
+      # ---- Coverage report using a repo-local tool manifest (recommended) ----
+      - name: Restore dotnet tools
+        run: dotnet tool restore
+
       - name: Report coverage (HTML + Cobertura)
         run: |
-          dotnet tool install --global dotnet-reportgenerator-globaltool
-          reportgenerator \
+          dotnet tool run reportgenerator \
             -reports:"**/coverage.cobertura.xml" \
             -targetdir:"coverage" \
             -reporttypes:"HtmlInline;Cobertura"
-        env:
-          PATH: $HOME/.dotnet/tools:$PATH
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
